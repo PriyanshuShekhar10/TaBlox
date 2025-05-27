@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root {
+        --primary-color: #1a73e8;
+        --primary-hover: #1557b0;
+        --text-primary: #202124;
+        --text-secondary: #5f6368;
+        --background: #ffffff;
+        --surface: #f8f9fa;
+        --border: #dadce0;
+        --success: #34a853;
+        --error: #ea4335;
+      }
+
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, sans-serif;
+        width: 320px;
+        padding: 20px;
+        margin: 0;
+        background: var(--background);
+        color: var(--text-primary);
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 16px;
+        padding: 8px 0;
+      }
+
+      .header img {
+        width: 200px;
+        height: auto;
+        object-fit: contain;
+      }
+
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        background: var(--surface);
+        padding: 12px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+      }
+
+      .input-group:focus-within {
+        box-shadow: 0 0 0 2px var(--primary-color);
+      }
+
+      label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+
+      input {
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: all 0.2s ease;
+        background: var(--background);
+      }
+
+      input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+      }
+
+      .button-group {
+        display: flex;
+        gap: 8px;
+      }
+
+      button {
+        flex: 1;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 6px;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      button:hover {
+        background: var(--primary-hover);
+        transform: translateY(-1px);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button:disabled {
+        background: var(--border);
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      #stop {
+        background: var(--error);
+      }
+
+      #stop:hover {
+        background: #d93025;
+      }
+
+      .status-container {
+        background: var(--surface);
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      #status {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin: 0;
+      }
+
+      .timer-container {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        margin: 0 auto;
+      }
+
+      .timer-circle {
+        transform: rotate(-90deg);
+        transform-origin: center;
+      }
+
+      .timer-circle-bg {
+        fill: none;
+        stroke: var(--border);
+        stroke-width: 8;
+      }
+
+      .timer-circle-progress {
+        fill: none;
+        stroke: var(--primary-color);
+        stroke-width: 8;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.3s ease;
+      }
+
+      #countdown {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--primary-color);
+        text-align: center;
+        width: 100%;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .fade-in {
+        animation: fadeIn 0.3s ease forwards;
+      }
+
+      .progress-text {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-align: center;
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <img src="icons/Logo.png" alt="Tab Lock Timer" />
+      </div>
+
+      <div class="input-group fade-in">
+        <label for="minutes">Duration (minutes)</label>
+        <input id="minutes" type="number" min="1" value="25" />
+      </div>
+
+      <div class="button-group fade-in">
+        <button id="start">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M5 3l14 9-14 9V3z" />
+          </svg>
+          Start Lock
+        </button>
+        <button id="stop" class="hidden">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect x="6" y="6" width="12" height="12" />
+          </svg>
+          Stop
+        </button>
+      </div>
+
+      <div class="status-container fade-in">
+        <div id="status"></div>
+        <div class="timer-container hidden" id="timerContainer">
+          <svg
+            class="timer-circle"
+            width="120"
+            height="120"
+            viewBox="0 0 120 120"
+          >
+            <circle class="timer-circle-bg" cx="60" cy="60" r="54" />
+            <circle class="timer-circle-progress" cx="60" cy="60" r="54" />
+          </svg>
+          <div id="countdown"></div>
+        </div>
+        <div class="progress-text hidden" id="progressText"></div>
+      </div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>
