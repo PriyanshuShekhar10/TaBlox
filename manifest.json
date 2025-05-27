@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Tab Lock Timer",
+  "name": "TaBlox",
   "version": "1.0",
   "description": "Lock yourself to the current tab until your timer runs out.",
   "permissions": [

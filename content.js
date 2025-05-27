@@ -319,6 +319,7 @@ widget.style.display = "none";
 document.body.appendChild(widget);
 
 // Function to update the widget with remaining time
+let lastDisplayedTime = "";
 function updateWidget(endTime) {
   const now = Date.now();
   const remaining = endTime - now;
@@ -328,9 +329,13 @@ function updateWidget(endTime) {
   }
   const minutes = Math.floor(remaining / 60000);
   const seconds = Math.floor((remaining % 60000) / 1000);
-  widget.textContent = `Time remaining: ${minutes}:${seconds
+  const newTime = `Time remaining: ${minutes}:${seconds
     .toString()
     .padStart(2, "0")}`;
+  if (newTime !== lastDisplayedTime) {
+    widget.textContent = newTime;
+    lastDisplayedTime = newTime;
+  }
   widget.style.display = "block";
 }
 
