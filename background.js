@@ -72,7 +72,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       chrome.alarms.create("unlock", { when: lock.endTime });
     });
     // Enable navigation lock in the content script
-    safeSendMessageToContentScript(msg.tabId, { action: "enable-nav-lock" });
+    console.debug(
+      "Tab Lock Timer: Enabling nav lock with endTime:",
+      lock.endTime
+    );
+    safeSendMessageToContentScript(msg.tabId, {
+      action: "enable-nav-lock",
+      endTime: lock.endTime,
+    });
     sendResponse({ endTime: lock.endTime });
   } else if (msg.action === "stop-lock") {
     if (lock) {

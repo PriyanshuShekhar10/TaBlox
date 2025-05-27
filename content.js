@@ -301,5 +301,63 @@ document.addEventListener(
   };
 });
 
+// Create a floating widget element
+const widget = document.createElement("div");
+widget.className = "tablock-widget";
+widget.style.position = "fixed";
+widget.style.bottom = "20px";
+widget.style.right = "20px";
+widget.style.backgroundColor = "#1a73e8";
+widget.style.color = "white";
+widget.style.padding = "8px 12px";
+widget.style.borderRadius = "8px";
+widget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+widget.style.zIndex = "2147483647";
+widget.style.fontFamily =
+  'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+widget.style.display = "none";
+document.body.appendChild(widget);
+
+// Function to update the widget with remaining time
+function updateWidget(endTime) {
+  const now = Date.now();
+  const remaining = endTime - now;
+  if (remaining <= 0) {
+    widget.style.display = "none";
+    return;
+  }
+  const minutes = Math.floor(remaining / 60000);
+  const seconds = Math.floor((remaining % 60000) / 1000);
+  widget.textContent = `Time remaining: ${minutes}:${seconds
+    .toString()
+    .padStart(2, "0")}`;
+  widget.style.display = "block";
+}
+
+// Function to start updating the widget
+document.addEventListener("DOMContentLoaded", () => {
+  chrome.runtime.sendMessage({ action: "get-lock-status" }, (response) => {
+    if (response && response.isLocked) {
+      const endTime = response.endTime;
+      updateWidget(endTime);
+      setInterval(() => updateWidget(endTime), 1000);
+    }
+  });
+});
+
+// Update message listener to start widget update when lock is enabled
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  console.debug("Tab Lock Timer: Received message:", msg);
+  if (msg.action === "enable-nav-lock") {
+    const endTime = msg.endTime;
+    updateWidget(endTime);
+    setInterval(() => updateWidget(endTime), 1000);
+  } else if (msg.action === "disable-nav-lock") {
+    widget.style.display = "none";
+  }
+  sendResponse({ navLocked });
+  return true;
+});
+
 initialize();
 window.addEventListener("unload", cleanup);
