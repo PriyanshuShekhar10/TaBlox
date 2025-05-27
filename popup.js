@@ -39,6 +39,18 @@ function updateCountdown(endTime) {
     document.getElementById("status").textContent = "Lock has ended";
     document.getElementById("start").classList.remove("hidden");
     document.getElementById("stop").classList.add("hidden");
+
+    // Request lock status update from background
+    chrome.runtime.sendMessage({ action: "get-lock-status" }, (response) => {
+      if (!response || !response.isLocked) {
+        // If lock is not active, ensure UI is in unlocked state
+        document.getElementById("timerContainer").classList.add("hidden");
+        document.getElementById("progressText").classList.add("hidden");
+        document.getElementById("status").textContent = "Lock has ended";
+        document.getElementById("start").classList.remove("hidden");
+        document.getElementById("stop").classList.add("hidden");
+      }
+    });
     return;
   }
 

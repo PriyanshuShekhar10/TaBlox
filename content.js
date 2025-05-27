@@ -70,64 +70,236 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 let navLocked = false;
 
+// Add function to check lock status on page load
+async function checkLockStatus() {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: "get-lock-status",
+    });
+    const wasLocked = navLocked;
+    navLocked = response && response.isLocked;
+    console.debug("Tab Lock Timer: Lock status checked:", {
+      wasLocked,
+      isLocked: navLocked,
+      response,
+    });
+  } catch (error) {
+    console.debug(
+      "Tab Lock Timer: Failed to check lock status:",
+      error.message
+    );
+    navLocked = false;
+  }
+}
+
+// Check lock status when page loads
+checkLockStatus();
+
+// Update message listener to handle page reloads
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  console.debug("Tab Lock Timer: Received message:", msg);
+  const wasLocked = navLocked;
+
   if (msg.action === "enable-nav-lock") {
     navLocked = true;
   } else if (msg.action === "disable-nav-lock") {
     navLocked = false;
+    // Hide notification if it's showing
+    notification.classList.remove("show");
+  } else if (msg.action === "get-lock-status") {
+    sendResponse({ navLocked });
   }
+
+  console.debug("Tab Lock Timer: Lock state changed:", {
+    wasLocked,
+    isLocked: navLocked,
+    action: msg.action,
+  });
   sendResponse({ navLocked });
+  return true;
 });
 
-// 1) Block all <a> clicks
+// Update beforeunload handler to not show notification
+window.addEventListener("beforeunload", (e) => {
+  if (navLocked) {
+    e.preventDefault();
+    e.returnValue = "Navigation is locked until the timer ends.";
+    // Don't show notification on page unload
+    return;
+  }
+});
+
+// Add visibility change handler to check lock status when tab becomes visible
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    checkLockStatus();
+  }
+});
+
+// Add custom notification styles
+const style = document.createElement("style");
+style.textContent = `
+  .tablock-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 2147483647;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    transform: translateX(120%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 320px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .tablock-notification.show {
+    transform: translateX(0);
+  }
+
+  .tablock-notification-icon {
+    width: 24px;
+    height: 24px;
+    color: #1a73e8;
+    flex-shrink: 0;
+  }
+
+  .tablock-notification-content {
+    flex-grow: 1;
+  }
+
+  .tablock-notification-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #202124;
+    margin: 0 0 4px 0;
+  }
+
+  .tablock-notification-message {
+    font-size: 13px;
+    color: #5f6368;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .tablock-notification-close {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: #5f6368;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+  }
+
+  .tablock-notification-close:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  .tablock-notification-close svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  @keyframes slideIn {
+    from { transform: translateX(120%); }
+    to { transform: translateX(0); }
+  }
+
+  @keyframes slideOut {
+    from { transform: translateX(0); }
+    to { transform: translateX(120%); }
+  }
+`;
+document.head.appendChild(style);
+
+// Create notification element
+const notification = document.createElement("div");
+notification.className = "tablock-notification";
+notification.innerHTML = `
+  <svg class="tablock-notification-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+    <path d="M12 8v4M12 16h.01"/>
+  </svg>
+  <div class="tablock-notification-content">
+    <h3 class="tablock-notification-title">Navigation Locked</h3>
+    <p class="tablock-notification-message">Please wait until the timer ends to navigate.</p>
+  </div>
+  <button class="tablock-notification-close" aria-label="Close notification">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M18 6L6 18M6 6l12 12"/>
+    </svg>
+  </button>
+`;
+document.body.appendChild(notification);
+
+// Function to show notification
+function showNotification() {
+  notification.classList.add("show");
+  // Auto-hide after 5 seconds
+  setTimeout(() => {
+    notification.classList.remove("show");
+  }, 5000);
+}
+
+// Add close button functionality
+notification
+  .querySelector(".tablock-notification-close")
+  .addEventListener("click", () => {
+    notification.classList.remove("show");
+  });
+
+// Update click handler to log state
 document.addEventListener(
   "click",
   (e) => {
     if (!navLocked) return;
     const a = e.target.closest("a[href]");
     if (a && a.href) {
+      console.debug("Tab Lock Timer: Blocked navigation attempt:", {
+        href: a.href,
+        navLocked,
+      });
       e.preventDefault();
       e.stopImmediatePropagation();
-      alert("Navigation is locked until your timer ends.");
+      showNotification();
     }
   },
   true
 );
 
-// 2) Block form submissions
+// Update form submission handler
 document.addEventListener(
   "submit",
   (e) => {
     if (navLocked) {
       e.preventDefault();
       e.stopImmediatePropagation();
-      alert("Form submissions are disabled until the lock ends.");
+      showNotification();
     }
   },
   true
 );
 
-// 3) Block reload/back/forward/address‐bar
-window.addEventListener("beforeunload", (e) => {
-  if (navLocked) {
-    e.preventDefault();
-    e.returnValue = "Navigation is locked until the timer ends.";
-  }
-});
-
-// 4) Prevent SPA navigations via history API
+// Update history API handlers
 ["pushState", "replaceState"].forEach((fn) => {
   const orig = history[fn];
   history[fn] = function (...args) {
     if (navLocked) {
-      alert("Navigation is locked until your timer ends.");
+      showNotification();
       return;
     }
     return orig.apply(this, args);
   };
 });
-
-// —— End nav‐lock logic —— //
 
 initialize();
 window.addEventListener("unload", cleanup);
